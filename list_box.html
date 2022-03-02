@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+
+    <title>box</title>
+
+	<meta name="keywords" content="Galaxy Racing" />
+	<meta name="description" content="Galaxy Racing" />
+    <link rel="shortcut icon" href="favicon.ico"> 
+    <link href="css/bootstrap.min.css?v=3.3.7" rel="stylesheet">
+    <link href="css/font-awesome.css?v=4.4.0" rel="stylesheet">
+    <link href="css/plugins/sweetalert/sweetalert.css" rel="stylesheet">
+
+    <link href="css/animate.css" rel="stylesheet">
+    <link href="css/style.css?v=4.1.0" rel="stylesheet">
+	<style>
+		.img-item{
+			width: 300px;
+			height: 300px;
+			border-radius:15px; 
+		}
+		.col-sm-4 span{
+			font-size:12px;
+		}
+		.stat-percent{
+			font-size:10px;
+			text-valign:bottom;
+		}
+	</style>
+
+</head>
+
+<body class="gray-bg">
+    <div class="wrapper wrapper-content animated fadeInRight">
+        <div class="row">
+			<div class="col-sm-3">
+                <div class="ibox">
+                    <div class="ibox-content">
+                        <div class="team-members text-center">
+							<a class="openbox" href="javascript:void(0)">
+								<img alt="member" class="img-item" src="img/manghe.png">
+							</a>
+                        </div>
+						<div class="row  m-t-sm text-center">
+							<div class="col-sm-1">
+							</div>
+							<div class="col-sm-9">
+								<span>您将获得：工人或者锄头 <br>您将花费<span id="price">加载中...</span>钻石币</span>
+							</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- 全局js -->
+    <script src="js/jquery.min.js?v=2.1.4"></script>
+    <script src="js/bootstrap.min.js?v=3.3.7"></script>
+    <script src="js/plugins/sweetalert/sweetalert.min.js"></script>
+	<script type="text/javascript" src="js/web3.min.js"> </script>
+	<script type="text/javascript" src="abi/abi.js"> </script>
+	<script>
+		loadData(function(){
+			var account="";
+			var price=0;
+			if (typeof window.ethereum !== 'undefined') {
+				var ethereum = window.ethereum
+				//禁止自动刷新，metamask要求写的
+				ethereum.autoRefreshOnNetworkChange = false
+				try {
+					//第一次链接Metamask
+					var accounts = ethereum.enable()
+					provider = new Web3(ethereum);
+					var contract_box=new provider.eth.Contract(contracts.box.abi,contracts.box.address);
+					var contract_worker=new provider.eth.Contract(contracts.worker.abi,contracts.worker.address);
+					var contract_hoe=new provider.eth.Contract(contracts.hoe.abi,contracts.hoe.address);
+					provider.eth.getAccounts(function (error, result) {
+						if (!error){
+							console.log(result)//授权成功后result能正常获取到账号了
+							provider.eth.getBalance(result[0]).then(console.log);
+							account=result[0];
+							contract_box.methods.price().call({from:account},function(error,result){
+								console.log(result)
+								price=result;
+								$("#price").html(price/(10**18));
+							});
+						}
+					});
+					$('.openbox').click(function () {
+						var slider = document.createElement("input");
+						slider.type = "range";
+						swal({
+					        title: "信息确认",
+					        text: "购买盲盒并开启，将花费您"+price/(10**18)+"钻石币！",
+					        type: "warning",
+					        showCancelButton: true,
+					        content: slider,
+					        confirmButtonColor: "#DD6B55",
+					        confirmButtonText: "确认购买",
+					        closeOnConfirm: false
+					    }, function (isConfirm) {
+					    	if(isConfirm){
+						    	contract_box.methods.buyBox().send({from:account},function(error,result){
+						    		swal({
+									    title: "交易发送中，请等待...",
+									    type: "info",
+									    confirmButtonText:"好的"
+					                });
+				                }).on('transactionHash', function(hash){
+								    console.log(hash);
+								})
+								.on('confirmation', function(confirmationNumber, receipt){
+								    console.log(receipt);
+								})
+								.on('receipt', function(receipt){
+								    console.log(receipt);
+								    for(var e in receipt.events){
+								    	if(e=="OpenBox"){
+										    console.log(receipt.events[e].returnValues.create);
+										    console.log(receipt.events[e].returnValues.leixing);
+										    if(receipt.events[e].returnValues.leixing=="1"){
+							    				type="Worker";
+							    				loadWorker(receipt.events[e].returnValues.create);
+							    			}else if(receipt.events[e].returnValues.leixing=="2"){
+							    				type="Hoe";
+							    				loadHoe(receipt.events[e].returnValues.create);
+							    			}
+								    	}
+								    }
+								})
+								.on('error', console.error); ;
+					        }
+					    });
+						function loadWorker(tokenId){
+							contract_worker.methods.props(tokenId).call({from:account},function(error,power){
+								console.log(power);
+								var obj={
+									tokenId:tokenId,
+									power:power
+								}
+								var html=pinWorker(obj,"col-sm-12");
+					    		swal({
+								    title: "开启成功",
+							    	text:html,
+									html:true,
+								    confirmButtonText:"好的"
+				                });
+							})
+						}
+						function loadHoe(tokenId){
+							contract_hoe.methods.props(tokenId).call({from:account},function(error,power){
+								console.log(power);
+								var obj={
+									tokenId:tokenId,
+									power:power
+								}
+								var html=pinHoe(obj,"col-sm-12");
+					    		swal({
+								    title: "开启成功",
+							    	text:html,
+  									html:true,
+								    confirmButtonText:"好的"
+				                });
+							})
+						}
+					});
+				} catch (e) {
+					swal({
+					    title: "错误:"+e,
+					    type: "error",
+					    confirmButtonText:"好的"
+					});
+				}
+			} else {
+				swal({
+				    title: "没有安装metamask",
+				    type: "error",
+				    confirmButtonText:"好的"
+				});
+			}
+		});
+	</script>
+</body>
+
+</html>

@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+
+    <title>wallet</title>
+
+	<meta name="keywords" content="Galaxy Racing" />
+	<meta name="description" content="Galaxy Racing" />
+    <link rel="shortcut icon" href="favicon.ico"> <link href="css/bootstrap.min.css?v=3.3.7" rel="stylesheet">
+    <link href="css/font-awesome.css?v=4.4.0" rel="stylesheet">
+
+    <link href="css/animate.css" rel="stylesheet">
+    <link href="css/style.css?v=4.1.0" rel="stylesheet">
+	<style>
+		.img-item{
+			width: 300px;
+			height: 200px;
+		}
+		.col-sm-4 span{
+			font-size:12px;
+		}
+		.stat-percent{
+			font-size:10px;
+			text-valign:bottom;
+		}
+	</style>
+
+</head>
+
+<body class="gray-bg">
+    <div class="wrapper wrapper-content animated fadeInRight">
+        <div class="row">
+			<div class="col-sm-7">
+				<div class="ibox float-e-margins">
+					<div class="ibox-title">
+                        <h5>我的钱包</h5>
+                    </div>
+					<div class="ibox-content">
+						<div>
+							<div class="feed-activity-list">
+								<div class="feed-element">
+									<div class="media-body">
+										<font size="4px"><small class="text-muted">余额</small></font>
+										<br>
+										<font size="6px"><strong id="balance">加载中...</strong></font>
+									</div>
+								</div>
+								<div class="feed-element">
+									<div class="media-body form-group">
+										<font size="4px"><i class="fa fa-diamond" style="margin-left: 6px;"></i><small class="text-muted">diamonds</small></font>
+										<br>
+										<font size="6px"><strong id="diamonds_balance">加载中...</strong></font>
+									</div>
+									<div class="form-inline">
+										<div class="input-group">
+											<input type="text" placeholder="请输入数量" class="form-control" id="otherCount"> 
+										</div>
+										<div class="input-group">
+											<input type="text" placeholder="请输入地址" class="form-control" id="otherAddr"> 
+											<span class="input-group-btn"> 
+		                                     	<button type="button" class="btn btn-primary" id="btn3">转账</button> 
+											</span>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="col-sm-5">
+				<div class="ibox float-e-margins">
+					<div class="ibox-title">
+                        <h5>交换</h5>
+                    </div>
+					<div class="ibox-content feed-activity-list">
+						<div class="form-horizontal">
+							<div class="form-group">
+								<label class="col-sm-2 control-label">充值</label>
+								<div class="col-sm-10">
+									<div class="input-group">
+										<input type="text" placeholder="请输入兑换数量" class="form-control" id="val1"> 
+										<span class="input-group-btn"> 
+	                                     	<button type="button" class="btn btn-primary" id="btn1">兑换</button> 
+										</span>
+									</div>
+								</div>
+							</div>
+							<div class="form-group">
+								<label class="col-sm-2 control-label">提现</label>
+								<div class="col-sm-10">
+									<div class="input-group">
+										<input type="text" placeholder="请输入兑换数量" class="form-control" id="val2"> 
+										<span class="input-group-btn"> 
+	                                     	<button type="button" class="btn btn-primary" id="btn2">兑换</button> 
+										</span>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+    </div>
+    <!-- 全局js -->
+    <script src="js/jquery.min.js?v=2.1.4"></script>
+    <script src="js/bootstrap.min.js?v=3.3.7"></script>
+    <link href="css/plugins/sweetalert/sweetalert.css" rel="stylesheet">
+    <script src="js/plugins/sweetalert/sweetalert.min.js"></script>
+	<script type="text/javascript" src="js/web3.min.js"> </script>
+	<script type="text/javascript" src="abi/abi.js"> </script>
+	<script>
+		loadData(function(){
+			var account="";
+			if (typeof window.ethereum !== 'undefined') {
+				var ethereum = window.ethereum
+				//禁止自动刷新，metamask要求写的
+				ethereum.autoRefreshOnNetworkChange = false
+				try {
+					//第一次链接Metamask
+					var accounts = ethereum.enable()
+					provider = new Web3(ethereum);
+					var contract_diamonds=new provider.eth.Contract(contracts.diamonds.abi,contracts.diamonds.address);
+					provider.eth.getAccounts(function (error, result) {
+						if (!error){
+							console.log(result)//授权成功后result能正常获取到账号了
+							provider.eth.getBalance(result[0],function(error,result){
+								$("#balance").html(result/10**18);
+							});
+							account=result[0];
+							contract_diamonds.methods.balanceOf(account).call({from:account},function(error,result){
+								$("#diamonds_balance").html(result/10**18);
+							});
+							$('#btn1').click(function(){
+								var money=$("#val1").val();
+								if(money>0){
+									contract_diamonds.methods.exchange().send({from:account,value:money*(10**18)},function(error,result){
+							    		swal({
+										    title: "交易已经发出,等待钱包响应",
+										    type: "info",
+										    confirmButtonText:"好的"
+										});
+									}).on('transactionHash', function(hash){
+					                	console.log("1111111");
+									    console.log(hash);
+									}).on('confirmation', function(confirmationNumber, receipt){
+					                	console.log("2222222");
+									    console.log(receipt);
+									}).on('receipt', function(receipt){
+					                	console.log("33333333");
+									    console.log(receipt);
+									    for(var e in receipt.events){
+									    	if(e=="Bought"){
+									    		swal({
+												    title: "兑换成功"+(receipt.events[e].returnValues.amount/10**18),
+												    type: "info",
+												    confirmButtonText:"好的"
+												});
+									    	}
+									    }
+									}).on('error', console.error);
+								}else{
+									swal({
+									    title: "请输入兑换的数量",
+									    type: "error",
+									    confirmButtonText:"好的"
+									});
+								}
+							});
+							$('#btn2').click(function(){
+								var money=$("#val2").val();
+								if(money>0){
+									contract_diamonds.methods.withdaw(money*(10**18)+"").send({from:account},function(error,result){
+							    		swal({
+										    title: "交易已经发出,等待钱包响应",
+										    type: "info",
+										    confirmButtonText:"好的"
+										},function(){
+										});
+									}).on('transactionHash', function(hash){
+					                	console.log("1111111");
+									    console.log(hash);
+									}).on('confirmation', function(confirmationNumber, receipt){
+					                	console.log("2222222");
+									    console.log(receipt);
+									}).on('receipt', function(receipt){
+					                	console.log("33333333");
+									    console.log(receipt);
+									    for(var e in receipt.events){
+									    	if(e=="Sold"){
+									    		swal({
+												    title: "兑换成功"+(receipt.events[e].returnValues.amount/10**18),
+												    type: "info",
+												    confirmButtonText:"好的"
+												});
+									    	}
+									    }
+									}).on('error', console.error);
+								}else{
+									swal({
+									    title: "请输入兑换的数量",
+									    type: "error",
+									    confirmButtonText:"好的"
+									});
+								}
+							});
+						}
+					});
+				} catch (e) {
+					swal({
+					    title: "错误:"+e,
+					    type: "error",
+					    confirmButtonText:"好的"
+					});
+				}
+			} else {
+				swal({
+				    title: "没有安装metamask",
+				    type: "error",
+				    confirmButtonText:"好的"
+				});
+			}
+		})
+	</script>
+
+
+</body>
+
+</html>

@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+
+    <title>hoe</title>
+    <link rel="shortcut icon" href="favicon.ico"> <link href="css/bootstrap.min.css?v=3.3.7" rel="stylesheet">
+    <link href="css/font-awesome.css?v=4.4.0" rel="stylesheet">
+
+    <link href="css/animate.css" rel="stylesheet">
+    <link href="css/style.css?v=4.1.0" rel="stylesheet">
+	<style>
+		.img-item{
+			width: 300px;
+			height: 200px;
+		}
+		.col-sm-4 span{
+			font-size:12px;
+		}
+		.stat-percent{
+			font-size:10px;
+			text-valign:bottom;
+		}
+	</style>
+
+</head>
+
+<body class="gray-bg">
+    <div class="wrapper wrapper-content animated fadeInRight">
+    	<div class="row">
+			<input type="text" placeholder="请输入卖掉的价格" class="form-control" id="price"> 
+		</div>
+        <div class="row" id="workers">
+        	加载中...
+        </div>
+    </div>
+    <!-- 全局js -->
+    <script src="js/jquery.min.js?v=2.1.4"></script>
+    <script src="js/bootstrap.min.js?v=3.3.7"></script>
+    <link href="css/plugins/sweetalert/sweetalert.css" rel="stylesheet">
+    <script src="js/plugins/sweetalert/sweetalert.min.js"></script>
+	<script type="text/javascript" src="js/web3.min.js"> </script>
+	<script type="text/javascript" src="abi/abi.js"> </script>
+	<script>
+		function choseHoe(id){
+			var v=parent.document.getElementById('hoe_value');
+			if(v){
+				v.innerHTML=id;
+				var index = parent.layer.getFrameIndex(window.name); 
+				parent.layer.close(index);
+			}
+		}
+		
+		function sale(id){
+			var price=$("#price").val();
+			if(price>0){
+				contract_marketHoe.methods.sale(id,price*(10**18)+"").send({from:account},function(error,result){})
+			}else{
+				swal({
+				    title: "出售价格不能为0",
+				    type: "error",
+				    confirmButtonText:"好的"
+				});
+			}
+		}
+		function cancel(id){
+			contract_marketHoe.methods.cancel(id).send({from:account},function(error,result){
+				console.log(error);
+				console.log(result);
+			})
+		}
+		var contract_hoe;
+		var contract_marketHoe;
+		var account="";
+		loadData(function(){
+			if (typeof window.ethereum !== 'undefined') {
+				var ethereum = window.ethereum
+				//禁止自动刷新，metamask要求写的
+				ethereum.autoRefreshOnNetworkChange = false
+				try {
+					//第一次链接Metamask
+					var accounts = ethereum.enable()
+					provider = new Web3(ethereum);
+					contract_hoe=new provider.eth.Contract(contracts.hoe.abi,contracts.hoe.address);
+					contract_marketHoe=new provider.eth.Contract(contracts.marketHoe.abi,contracts.marketHoe.address);
+					provider.eth.getAccounts(function (error, result) {
+						if (!error){
+							console.log(result)//授权成功后result能正常获取到账号了
+							provider.eth.getBalance(result[0]).then(console.log);
+							account=result[0];
+							function loadWorker(tokenId){
+								contract_hoe.methods.props(tokenId).call({from:account},function(error,power){
+									contract_hoe.methods.digAlow(tokenId).call({from:account},function(error,alow){
+										contract_marketHoe.methods.shop(tokenId).call({from:account},function(error,sale){
+											console.log(sale);
+											var obj={
+												tokenId:tokenId,
+												power:power,
+												alow:alow
+											}
+											if(sale.price>0){
+												obj.shoped=true;
+											}else{
+												obj.shoped=false;
+											}
+											var temp=pinHoe(obj);
+											$("#workers").append(temp);
+										});
+									});
+								});
+							}
+							contract_hoe.methods.getByOwner(account).call({from:account},function(error,result){
+								console.log(result);
+								$("#workers").html("");
+								for(var i=0;i<result.length;i++){
+									var workerId=result[i];
+									loadWorker(workerId);
+								}
+							});	
+						}
+					});
+				} catch (e) {
+					swal({
+					    title: "错误:"+e,
+					    type: "error",
+					    confirmButtonText:"好的"
+					});
+				}
+			} else {
+				swal({
+				    title: "没有安装metamask",
+				    type: "error",
+				    confirmButtonText:"好的"
+				});
+			}
+		});
+	</script>
+</body>
+
+</html>

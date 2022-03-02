@@ -1,0 +1,1 @@
+remixd -s D:\develop\program\ecslipse_ws\default\Diamonds\WebRoot\service --remix-ide https://remix.ethereum.org

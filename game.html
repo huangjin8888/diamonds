@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>首页</title>
+    <link rel="shortcut icon" href="favicon.ico"> <link href="css/bootstrap.min.css?v=3.3.7" rel="stylesheet">
+    <link href="css/font-awesome.css?v=4.4.0" rel="stylesheet">
+
+    <link href="css/animate.css" rel="stylesheet">
+    <link href="css/style.css?v=4.1.0" rel="stylesheet">
+    <link href="css/layer.css" rel="stylesheet">
+</head>
+
+<body class="gray-bg">
+    <div class="wrapper wrapper-content animated fadeInRight">
+        <div class="row">
+			<div class="col-sm-7">
+				<div class="ibox float-e-margins">
+					<div class="ibox-title">
+                        <h5>开始游戏</h5>
+                    </div>
+					<div class="ibox-content">
+						<div class="row">
+							<div class="col-sm-4">
+								<div class="ibox">
+									<div class="ibox-title">
+										<h5>金矿</h5>
+									</div>
+									<div class="ibox-content">
+										<div class="team-members" onclick="dig(1)">
+											<img alt="member" class="img-item" src="img/jin.png" width="100%">
+										</div>
+										<span>成功率：<div id="goldRate">未知</div></span>
+										<div class="progress progress-mini">
+											<div style="width: 0%;" class="progress-bar" id="goldStyle"></div>
+										</div>
+									</div>
+								</div>
+							</div>
+							<div class="col-sm-4">
+								<div class="ibox">
+									<div class="ibox-title">
+										<h5>银矿</h5>
+									</div>
+									<div class="ibox-content">
+										<div class="team-members" onclick="dig(2)">
+											<img alt="member" class="img-item" src="img/yin.png" width="100%">
+										</div>
+										<span>成功率：<div id="silverRate">未知</div></span>
+										<div class="progress progress-mini">
+											<div style="width: 0%;" class="progress-bar" id="silverStyle"></div>
+										</div>
+									</div>
+								</div>
+							</div>
+							<div class="col-sm-4">
+								<div class="ibox">
+									<div class="ibox-title">
+										<h5>铜矿</h5>
+									</div>
+									<div class="ibox-content">
+										<div class="team-members" onclick="dig(3)">
+											<img alt="member" class="img-item" src="img/tong.png" width="100%">
+										</div>
+										<span>成功率：<div id="copperRate">未知</div></span>
+										<div class="progress progress-mini">
+											<div style="width: 0%;" class="progress-bar" id="copperStyle"></div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div class="row">
+							<div class="col-sm-12">
+				                <div class="ibox float-e-margins">
+				                    <div class="ibox-title">
+				                        <h5>准备工作</h5>
+				                    </div>
+				                    <div class="ibox-content">
+				                        <div class="row">
+				                            <div class="col-sm-6 b-r">
+				                            	<button class="btn btn-w-m btn-primary" type="button" id="choseWorker">选择工人</button>
+				                                <p class="text-center" id="workerHtml">
+				                                </p>
+				                                <div id="worker_value" style="display:none;"></div>
+				                                <div id="worker"></div>
+				                            </div>
+				                            <div class="col-sm-6">
+				                            	<button class="btn btn-w-m btn-primary" type="button" id="choseHoe">选择锄头</button>
+				                                <p class="text-center" id="hoeHtml">
+				                                </p>
+				                                <div id="hoe_value" style="display:none;"></div>
+				                                <div id="tooler"></div>
+				                            </div>
+				                        </div>
+				                    </div>
+				                </div>
+				            </div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+    </div>
+    <!-- 全局js -->
+    <script src="js/jquery.min.js?v=2.1.4"></script>
+    <script src="js/bootstrap.min.js?v=3.3.7"></script>
+    <script src="js/jquery-ui-1.10.4.min.js"></script>
+    <script src="js/layer.js"></script>
+    <link href="css/plugins/sweetalert/sweetalert.css" rel="stylesheet">
+    <script src="js/plugins/sweetalert/sweetalert.min.js"></script>
+	<script type="text/javascript" src="js/web3.min.js"> </script>
+	<script type="text/javascript" src="abi/abi.js"> </script>
+	<script>
+		function dig(type){
+			var workerId=$("#worker_value").html();
+			var hoeId=$("#hoe_value").html();
+			if(workerId&&hoeId){
+				contract_game.methods.dig(workerId,hoeId,type).send({from:account},function(error,result){
+					swal({
+					    title: "挖矿请求已发送，等待响应",
+					    type: "info",
+					    confirmButtonText:"好的"
+					});
+				}).on('transactionHash', function(hash){
+				    console.log(hash);
+				}).on('confirmation', function(confirmationNumber, receipt){
+				}).on('receipt', function(receipt){
+				    for(var e in receipt.events){
+				    	if(e=="Dig"){
+				    		if(receipt.events[e].returnValues.successed){
+					    		swal({
+								    title: "挖矿成功，奖励已经发送到余额",
+								    type: "info",
+								    confirmButtonText:"好的"
+								},function(){
+									window.location.reload();
+								});
+				    		}else{
+					    		swal({
+								    title: "挖矿失败",
+								    type: "error",
+								    confirmButtonText:"好的"
+								},function(){
+									window.location.reload();
+								});
+				    		}
+				    	}
+				    }
+				}).on('error', console.error);
+			}
+		}
+		function checkRate(){
+			var workerId=$("#worker_value").html();
+			var hoeId=$("#hoe_value").html();
+			if(workerId&&hoeId){
+				contract_game.methods.goldRate(workerId,hoeId).call({from:account},function(error,result){
+					$("#goldRate").html(result/100+"%")
+					$("#goldStyle").css("width",result/100+"%");
+				});
+				contract_game.methods.silverRate(workerId,hoeId).call({from:account},function(error,result){
+					$("#silverRate").html(result/100+"%")
+					$("#silverStyle").css("width",result/100+"%");
+				});
+				contract_game.methods.copperRate(workerId,hoeId).call({from:account},function(error,result){
+					$("#copperRate").html(result/100+"%")
+					$("#copperStyle").css("width",result/100+"%");
+				});
+			}
+		}
+		function selectWorker(){
+			layer.open({
+				type: 2,
+				title: '选择工人',
+				shadeClose: true,
+				shade: 0.8,
+				area: ['1220px', '90%'],
+				content: 'list_worker.html?r='+Math.random(),
+				end:function(){
+					var workerId=$("#worker_value").html();
+					function loadWorker(tokenId){
+						contract_worker.methods.props(tokenId).call({from:account},function(error,power){
+							contract_worker.methods.digAlow(tokenId).call({from:account},function(error,alow){
+								console.log(power);
+								var obj={
+									tokenId:tokenId,
+									power:power,
+									alow:alow
+								}
+								var temp=pinWorker(obj,"col-sm-12");
+								$("#workerHtml").html(temp);
+							});
+						});
+					}
+					loadWorker(workerId);
+					checkRate();
+				}
+			});	
+		}
+		$("#choseWorker").click(function(){
+			selectWorker();
+		});
+		function selectHoe(){
+			layer.open({
+				type: 2,
+				title: '选择锄头',
+				shadeClose: true,
+				shade: 0.8,
+				area: ['1220px', '90%'],
+				content: 'list_hoe.html?r='+Math.random(),
+				end:function(){
+					var workerId=$("#hoe_value").html();
+					function loadWorker(tokenId){
+						contract_hoe.methods.props(tokenId).call({from:account},function(error,power){
+							contract_hoe.methods.digAlow(tokenId).call({from:account},function(error,alow){
+								console.log(power);
+								var obj={
+									tokenId:tokenId,
+									power:power,
+									alow:alow
+								}
+								var temp=pinHoe(obj,"col-sm-12");
+								$("#hoeHtml").html(temp);
+							});
+						});
+					}
+					loadWorker(workerId);
+					checkRate();
+				}
+			});	
+		}
+		$("#choseHoe").click(function(){
+			selectHoe();
+		});
+		var account="";
+		var contract_game;
+		var contract_worker;
+		var contract_hoe;
+		loadData(function(){
+			if (typeof window.ethereum !== 'undefined') {
+				var ethereum = window.ethereum
+				//禁止自动刷新，metamask要求写的
+				ethereum.autoRefreshOnNetworkChange = false
+				try {
+					//第一次链接Metamask
+					var accounts = ethereum.enable()
+					provider = new Web3(ethereum);
+					contract_game=new provider.eth.Contract(contracts.game.abi,contracts.game.address);
+					contract_worker=new provider.eth.Contract(contracts.worker.abi,contracts.worker.address);
+					contract_hoe=new provider.eth.Contract(contracts.hoe.abi,contracts.hoe.address);
+					provider.eth.getAccounts(function (error, result) {
+						if (!error){
+							console.log(result)//授权成功后result能正常获取到账号了
+							provider.eth.getBalance(result[0],function(error,result){
+								$("#balance").html(result/10**18);
+							});
+							account=result[0];
+						}
+					});
+				} catch (e) {
+					swal({
+					    title: "错误:"+e,
+					    type: "error",
+					    confirmButtonText:"好的"
+					});
+				}
+			} else {
+				swal({
+				    title: "没有安装metamask",
+				    type: "error",
+				    confirmButtonText:"好的"
+				});
+			}
+		});
+	</script>
+
+
+</body>
+
+</html>

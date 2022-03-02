@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+
+    <title>market_worker</title>
+    <link rel="shortcut icon" href="favicon.ico"> <link href="css/bootstrap.min.css?v=3.3.7" rel="stylesheet">
+    <link href="css/font-awesome.css?v=4.4.0" rel="stylesheet">
+
+    <link href="css/animate.css" rel="stylesheet">
+    <link href="css/style.css?v=4.1.0" rel="stylesheet">
+	<style>
+		.img-item{
+			width: 300px;
+			height: 200px;
+		}
+		.col-sm-4 span{
+			font-size:12px;
+		}
+		.stat-percent{
+			font-size:10px;
+			text-valign:bottom;
+		}
+	</style>
+
+</head>
+
+<body class="gray-bg">
+    <div class="wrapper wrapper-content animated fadeInRight">
+        <div class="row" id="workers">
+        	<!-- 
+        	<div class="col-sm-3" onclick="choseWorker('1')">
+        		<div class="ibox">
+        			<div class="ibox-title">
+        				<h5>1-0x18967ABbfE347e30375De118634958fDD937638e</h5>
+       				</div>
+       				<div class="ibox-content">
+       					<div class="team-members">
+       						<img alt="member" class="img-item" src="img/gongren.png">
+     					</div>
+     					<span>
+    						<button class="btn btn-w-m btn-primary" type="button">购买<i class="fa fa-shopping-cart"></i></button>
+   						</span>
+	     				<span>力气：11</span>
+	     				<span>diamonds：1</span>
+	     			</div>
+	     		</div>
+     		</div> -->
+     		加载中...
+        </div>
+    </div>
+    <!-- 全局js -->
+    <script src="js/jquery.min.js?v=2.1.4"></script>
+    <script src="js/bootstrap.min.js?v=3.3.7"></script>
+    <link href="css/plugins/sweetalert/sweetalert.css" rel="stylesheet">
+    <script src="js/plugins/sweetalert/sweetalert.min.js"></script>
+	<script type="text/javascript" src="js/web3.min.js"> </script>
+	<script type="text/javascript" src="abi/abi.js"> </script>
+	<script>
+		var contract_worker;
+		var contract_marketWorker;
+		var account="";
+		function cancel(id){
+			console.log(id);
+			console.log(account);
+			contract_marketWorker.methods.cancel(id).send({from:account},function(error,result){})
+		}
+		function buy(id){
+			contract_marketWorker.methods.buy(id).send({from:account},function(error,result){})
+		}
+		loadData(function(){
+			if (typeof window.ethereum !== 'undefined') {
+				var ethereum = window.ethereum
+				//禁止自动刷新，metamask要求写的
+				ethereum.autoRefreshOnNetworkChange = false
+				try {
+					//第一次链接Metamask
+					var accounts = ethereum.enable()
+					provider = new Web3(ethereum);
+					contract_marketWorker=new provider.eth.Contract(contracts.marketWorker.abi,contracts.marketWorker.address);
+					contract_worker=new provider.eth.Contract(contracts.worker.abi,contracts.worker.address);
+					provider.eth.getAccounts(function (error, result) {
+						if (!error){
+							console.log(result)//授权成功后result能正常获取到账号了
+							provider.eth.getBalance(result[0]).then(console.log);
+							account=result[0];
+							function loadWorker(tokenId){
+								contract_worker.methods.props(tokenId).call({from:account},function(error,power){
+									contract_worker.methods.digAlow(tokenId).call({from:account},function(error,alow){
+										contract_marketWorker.methods.shop(tokenId).call({from:account},function(error,sale){
+											var owner=false;
+											if(sale.seller==account){
+												owner=true;
+											}
+											var obj={
+												tokenId:tokenId,
+												power:power,
+												alow:alow,
+												saller:sale.seller,
+												isOwner:owner,
+												price:sale.price/(10**18)
+											}
+											var temp=pinMarketWorker(obj);
+											$("#workers").append(temp);
+										});
+									});
+								});
+							}
+							contract_marketWorker.methods.getShop().call({from:account},function(error,result){
+								console.log("-----");
+								console.log(result);
+								$("#workers").html("");
+								for(var i=0;i<result.length;i++){
+									var workerId=result[i];
+									loadWorker(workerId);
+								}
+							});	
+						}
+					});
+				} catch (e) {
+					swal({
+					    title: "错误:"+e,
+					    type: "error",
+					    confirmButtonText:"好的"
+					});
+				}
+			} else {
+				swal({
+				    title: "没有安装metamask",
+				    type: "error",
+				    confirmButtonText:"好的"
+				});
+			}
+		});
+	</script>
+</body>
+
+</html>

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>test</title>
+		<script src="js/jquery.min.js?v=2.1.4"></script>
+		<script type="text/javascript" src="js/web3.min.js"> </script>
+		<script type="text/javascript" src="abi/abi.js"> </script>
+	</head>
+	<body>
+		<div id="result"></div>
+		<input type="text" id="content"/>
+		<button id="submit">提交</button>
+	</body>
+	<script>
+		loadData(function(){
+			if (typeof window.ethereum !== 'undefined') {
+				var ethereum = window.ethereum
+				//禁止自动刷新，metamask要求写的
+				ethereum.autoRefreshOnNetworkChange = false
+				try {
+					//第一次链接Metamask
+					var accounts = ethereum.enable()
+					provider = new Web3(ethereum);
+					var contract_hello=new provider.eth.Contract(contracts.hello.abi,contracts.hello.address);
+					provider.eth.getAccounts(function (error, result) {
+						if (!error){
+							console.log(result)//授权成功后result能正常获取到账号了
+							provider.eth.getBalance(result[0]).then(console.log);
+							account=result[0];
+							console.log("-------------");
+							console.log(account);
+							console.log("-------------");
+							contract_hello.methods.getContent().call({from:account},function(error,result){
+								$("#result").html(result)
+							});
+						}
+					});
+					$('#submit').click(function () {
+				    	contract_hello.methods.setContent($("#content").val()).send({from:account},function(error,result){
+		                }).on('transactionHash', function(hash){
+		                	console.log("1111111");
+						    console.log(hash);
+						}).on('confirmation', function(confirmationNumber, receipt){
+		                	console.log("2222222");
+						    console.log(receipt);
+						}).on('receipt', function(receipt){
+		                	console.log("33333333");
+						    console.log(receipt);
+						    for(var e in receipt.events){
+						    	if(e=="Over"){
+						    		$("#result").html(receipt.events[e].returnValues.content);
+						    	}
+						    }
+						}).on('error', console.error); 
+					});
+				} catch (e) {
+					alert("错误:"+e);
+				}
+			} else {
+				alert("没有安装metamask");
+			}
+		})
+	</script>
+</html>
